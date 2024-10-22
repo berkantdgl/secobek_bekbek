@@ -1,16 +1,12 @@
 import os
+import time
 import requests
 from flask import Flask, request, jsonify
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-import time
 
 app = Flask(__name__)
-
-@app.route('/')
-def index():
-    return "Flask app running on Render!"
 
 @app.route('/login', methods=['POST'])
 def login_with_2fa():
@@ -22,7 +18,7 @@ def login_with_2fa():
     driver = webdriver.Chrome(options=options)
 
     # Web sayfasına git
-    driver.get("https://firmenladen.evc-net.com/login")  # Giriş sayfasının URL'si
+    driver.get("https://websiteniz.com/login")  # Giriş sayfasının URL'si
 
     # Kullanıcı adı ve şifre alanlarını bulup doldurma
     username_input = driver.find_element(By.NAME, "username")
@@ -43,24 +39,37 @@ def login_with_2fa():
     submit_button = driver.find_element(By.NAME, "submit")
     submit_button.click()
 
-    # 10 saniye bekleme
+    # 10 saniye bekleme (Power Automate'i tetiklemeden önce)
     time.sleep(10)
 
-    # Power Automate'e HTTP isteği gönderme ve 2FA kodunu alma
-    automate_url = "https://prod-14.germanywestcentral.logic.azure.com:443/workflows/241e72587fdc4953b2711f6ce6d7cf7c/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5_VogWTeapb5JPYHYiznzgu2Ylqz0CkmKSfxuW2CZPo"  # Power Automate URL'nizi buraya girin
-    response = requests.get(automate_url)  # Power Automate'e GET isteği gönderme
-    if response.status_code == 200:
-        # JSON formatında gelen 2FA kodunu alıyoruz
-        data = response.json()
-        two_fa_code = data['2fa_code']
-    else:
-        return jsonify({"error": "Failed to get 2FA code"}), 500
+    # Power Automate'i tetiklemek için manuel HTTP isteği gönderiyoruz
+    automate_url = "https://power-automate-trigger-url.com"  # Power Automate tetikleme URL'niz
+    response = requests.post(automate_url)  # Power Automate'i tetikleyen POST isteği
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to trigger Power Automate"}), 500
 
-    # 2FA kodunu Login code alanına yapıştırma
+    # Power Automate'ten 2FA kodunu almak için 10 saniye bekleme
+    time.sleep(10)
+
+    # Power Automate'in geri döneceği URL üzerinden Flask'ın beklemesi gerekiyor
+    # Power Automate 'send an http request' ile bu URL'ye geri kod gönderecek
+    return jsonify({"status": "Waiting for 2FA code"})
+
+
+@app.route('/receive_2fa', methods=['POST'])
+def receive_2fa():
+    # Power Automate'ten gelen POST isteğinde 2FA kodunu alıyoruz
+    data = request.get_json()
+    two_fa_code = data.get('mailbody')  # Power Automate'in gönderdiği kod
+
+    # Login code alanına bu kodu yapıştırma
+    driver = webdriver.Chrome(options=webdriver.ChromeOptions().add_argument("--headless"))
+    driver.get("https://websiteniz.com/login")  # Sayfayı tekrar açmak gerekebilir (ya da aynı driver'ı koruyabilirsiniz)
+    
     login_code_input = driver.find_element(By.NAME, "login_code")
     login_code_input.send_keys(two_fa_code)
 
-    # Log in butonuna tıklama
+    # Log in butonuna basma
     login_button = driver.find_element(By.NAME, "login_button")
     login_button.click()
 
@@ -76,6 +85,7 @@ def login_with_2fa():
         "status": "Login successful",
         "availability": availability
     })
+
 
 if __name__ == '__main__':
     # Render.com tarafından sağlanan portu kullanma

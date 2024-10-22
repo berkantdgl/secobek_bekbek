@@ -22,7 +22,7 @@ def login_with_2fa():
     driver = webdriver.Chrome(options=options)
 
     # Web sayfasına git
-    driver.get("https://websiteniz.com/login")  # Giriş sayfasının URL'si
+    driver.get("https://firmenladen.evc-net.com/login")  # Giriş sayfasının URL'si
 
     # Kullanıcı adı ve şifre alanlarını bulup doldurma
     username_input = driver.find_element(By.NAME, "username")
@@ -47,7 +47,7 @@ def login_with_2fa():
     time.sleep(10)
 
     # Power Automate'e HTTP isteği gönderme ve 2FA kodunu alma
-    automate_url = "https://your-automate-url.com"  # Power Automate URL'nizi buraya girin
+    automate_url = "https://prod-14.germanywestcentral.logic.azure.com:443/workflows/241e72587fdc4953b2711f6ce6d7cf7c/triggers/manual/paths/invoke?api-version=2016-06-01&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5_VogWTeapb5JPYHYiznzgu2Ylqz0CkmKSfxuW2CZPo"  # Power Automate URL'nizi buraya girin
     response = requests.get(automate_url)  # Power Automate'e GET isteği gönderme
     if response.status_code == 200:
         # JSON formatında gelen 2FA kodunu alıyoruz
